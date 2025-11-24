@@ -20,25 +20,24 @@ and returns ranked results according to query relevance — just like a miniatur
 ## 🚀 Quick Start (uv)
 
 1. Start PostgreSQL with `docker compose up -d db` (default connection is `postgresql://boogle:boogle@localhost:5432/boogle`).
-2. [Install `uv`](https://docs.astral.sh/uv/getting-started/installation/) once (native packages on macOS/Linux/Windows are available).
-3. Inside the repo run `uv sync`, then in two terminals run `uv run uvicorn src.api.main:app --reload` (API) and optionally `uv run streamlit run app.py`; visit `http://127.0.0.1:8000/docs` or the Streamlit URL printed in the console to try it out.
+2. Seed metadata with `docker compose run --rm seed` (use `SEED_SOURCE=gutenberg` and `SEED_LIMIT=500` to control what runs).
+3. [Install `uv`](https://docs.astral.sh/uv/getting-started/installation/) once (native packages on macOS/Linux/Windows are available).
+4. Inside the repo run `uv sync`, then in two terminals run `uv run uvicorn src.api.main:app --reload` (API) and optionally `uv run streamlit run app.py`; visit `http://127.0.0.1:8000/docs` or the Streamlit URL printed in the console to try it out.
 
 Set `DATABASE_URL` if you use different database credentials or a non-local host.
+Use the per-source API shape `GET /metadata/{source}/{book_id}`; search responses include a `source` field so users can pick where a result comes from.
 
 ---
 
 ## 🌐 Data Sources
 
 Boogle integrates with multiple free and public-domain repositories, such as:
-- [Project Gutenberg](https://www.gutenberg.org/)
-- [Open Library](https://openlibrary.org/)
-- [Wikisource](https://wikisource.org/)
-- [Public Domain Library](https://publicdomainlibrary.org/)
-- [Internet Archive](https://archive.org/details/texts)
-- [Domínio Público (Brazil)](http://www.dominiopublico.gov.br/)
-
----
-
+- [x] [Project Gutenberg](https://www.gutenberg.org/)
+- [ ] [Open Library](https://openlibrary.org/)
+- [ ] [Wikisource](https://wikisource.org/)
+- [ ] [Public Domain Library](https://publicdomainlibrary.org/)
+- [ ] [Internet Archive](https://archive.org/details/texts)
+- [ ] [Domínio Público (Brazil)](http://www.dominiopublico.gov.br/)
 
 Contact: **[enrellsa10@proton.me](mailto:enrellsa10@proton.me)**
 

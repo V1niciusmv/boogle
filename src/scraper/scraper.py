@@ -1,6 +1,7 @@
+import csv
 import requests
 from bs4 import BeautifulSoup
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Iterator
 import re
 
 
@@ -13,20 +14,21 @@ class GutenbergScraper:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=headers, timeout=30)
         response.raise_for_status()
         return response.text
 
-    def get_book_url(self, book_id: int) -> str:
+    def get_book_url(self, book_id: str) -> str:
         return f"{self.base_url}/ebooks/{book_id}"
 
-    def extract_metadata(self, book_id: int) -> Dict:
+    def extract_metadata(self, book_id: str) -> Dict:
         url = self.get_book_url(book_id)
         html = self.fetch(url)
         soup = BeautifulSoup(html, 'html.parser')
         
         metadata = {
-            'book_id': book_id,
+            'source': 'gutenberg',
+            'book_id': str(book_id),
             'url': url,
             'title': None,
             'author': None,
@@ -118,13 +120,28 @@ class GutenbergScraper:
             href = link.get('href', '')
             match = re.search(r'/ebooks/(\d+)', href)
             if match:
-                book_id = int(match.group(1))
+                book_id = match.group(1)
                 if book_id not in seen_ids:
                     seen_ids.add(book_id)
                     results.append({
-                        'book_id': book_id,
+                        'source': 'gutenberg',
+                        'book_id': str(book_id),
                         'title': link.get_text(strip=True),
                         'url': f"{self.base_url}{href}"
                     })
         
         return results
+
+    def iter_book_ids(self, limit: Optional[int] = None) -> Iterator[str]:
+        feed_url = f"{self.base_url}/cache/epub/feeds/pg_catalog.csv"
+        text = self.fetch(feed_url)
+        reader = csv.DictReader(text.splitlines())
+        count = 0
+        for row in reader:
+            book_id = row.get("Text#")
+            if not book_id:
+                continue
+            yield book_id
+            count += 1
+            if limit and count >= limit:
+                break
