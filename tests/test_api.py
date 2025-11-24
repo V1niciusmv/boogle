@@ -116,5 +116,5 @@ def test_search_combines_cache_with_remote_results(monkeypatch):
     data = response.json()
     returned_ids = {entry["book_id"] for entry in data}
     assert returned_ids == {3, 4}
-    assert repo.get_book(4) is not None  # remote metadata cached
+    assert repo.get_book(4) is not None
     assert scraper.extract_calls == [4]

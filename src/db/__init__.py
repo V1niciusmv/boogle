@@ -1,3 +1,3 @@
-from .database import SQLiteRepository
+from .database import PostgresRepository
 
-__all__ = ["SQLiteRepository"]
+__all__ = ["PostgresRepository"]

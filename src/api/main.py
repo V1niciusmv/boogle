@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from src.scraper.scraper import GutenbergScraper
-from src.db import SQLiteRepository
+from src.db import PostgresRepository
 
 app = FastAPI(title="Gutenberg Metadata API", version="1.0.0")
 
@@ -16,7 +16,14 @@ app.add_middleware(
 )
 
 scraper = GutenbergScraper()
-database = SQLiteRepository()
+database: PostgresRepository | None = None
+
+
+def get_database() -> PostgresRepository:
+    global database
+    if database is None:
+        database = PostgresRepository()
+    return database
 
 
 class BookMetadata(BaseModel):
@@ -49,11 +56,12 @@ async def root():
 @app.get("/metadata/{book_id}", response_model=BookMetadata)
 async def get_metadata(book_id: int):
     try:
-        cached_metadata = database.get_book(book_id)
+        db = get_database()
+        cached_metadata = db.get_book(book_id)
         if cached_metadata:
             return cached_metadata
         metadata = scraper.extract_metadata(book_id)
-        database.upsert_book(metadata)
+        db.upsert_book(metadata)
         return metadata
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error extracting metadata: {str(e)}")
@@ -62,7 +70,8 @@ async def get_metadata(book_id: int):
 @app.get("/search", response_model=List[SearchResult])
 async def search_books(query: str, limit: int = 10):
     try:
-        db_results = database.search_books(query, limit) if query else []
+        db = get_database()
+        db_results = db.search_books(query, limit) if query else []
         results = list(db_results)
 
         if len(results) < limit:
@@ -73,13 +82,12 @@ async def search_books(query: str, limit: int = 10):
                 if result["book_id"] not in existing_ids:
                     results.append(result)
                     existing_ids.add(result["book_id"])
-            # opportunistically cache metadata for the newly discovered books
             for remote in remote_results:
-                if database.get_book(remote["book_id"]):
+                if db.get_book(remote["book_id"]):
                     continue
                 try:
                     metadata = scraper.extract_metadata(remote["book_id"])
-                    database.upsert_book(metadata)
+                    db.upsert_book(metadata)
                 except Exception:
                     continue
 
