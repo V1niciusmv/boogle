@@ -65,6 +65,15 @@ class PostgresRepository:
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS books_author_idx ON books (lower(coalesce(author, '')))"
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS seed_offsets (
+                    source TEXT PRIMARY KEY,
+                    position BIGINT NOT NULL DEFAULT -1,
+                    last_book_id TEXT
+                )
+                """
+            )
 
     def upsert_book(self, metadata: Dict) -> None:
         source = metadata.get("source")
@@ -156,6 +165,29 @@ class PostgresRepository:
                 params,
             ).fetchall()
         return [dict(row) for row in rows]
+
+    def get_seed_offset(self, source: str) -> tuple[int, Optional[str]]:
+        with self.pool.connection() as conn:
+            row = conn.execute(
+                "SELECT position, last_book_id FROM seed_offsets WHERE source = %s",
+                (source,),
+            ).fetchone()
+        if not row:
+            return -1, None
+        return int(row["position"]), row["last_book_id"]
+
+    def update_seed_offset(self, source: str, position: int, last_book_id: Optional[str]) -> None:
+        with self.pool.connection() as conn:
+            conn.execute(
+                """
+                INSERT INTO seed_offsets (source, position, last_book_id)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (source) DO UPDATE
+                SET position = EXCLUDED.position,
+                    last_book_id = EXCLUDED.last_book_id
+                """,
+                (source, position, last_book_id),
+            )
 
     def close(self) -> None:
         self.pool.close()
